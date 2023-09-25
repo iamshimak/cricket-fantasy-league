@@ -1,8 +1,13 @@
 package com.cricket.fantasy.controller.cricket;
 
+import com.cricket.fantasy.entity.fantasy.user.UserFantasySquad;
+import com.cricket.fantasy.entity.user.User;
 import com.cricket.fantasy.model.domain.cricsheet.CricSheetMatchData;
-import com.cricket.fantasy.service.cricket.CricketService;
+import com.cricket.fantasy.service.cricket.CricketFeedService;
+import com.cricket.fantasy.service.cricket.MatchService;
+import com.cricket.fantasy.service.fantasy.FantasyFeedService;
 import com.cricket.fantasy.service.fantasy.FantasyService;
+import com.cricket.fantasy.service.user.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,21 +23,37 @@ import java.util.List;
 public class CricketController {
 
     @Autowired
-    private CricketService cricketService;
+    private CricketFeedService cricketFeedService;
+
+    @Autowired
+    private MatchService matchService;
+
+    @Autowired
+    private FantasyFeedService userFantasyService;
+
+    @Autowired
+    private UserService userService;
 
     @Autowired
     private FantasyService fantasyService;
 
     @PostMapping("/cricsheet-feed")
-    public ResponseEntity<Void> setupDataFromCricFeed(@RequestBody CricSheetMatchData matchData) {
-        cricketService.setupDatabaseFromCrickFeed(matchData);
-        fantasyService.updatePoints(matchData);
+    public ResponseEntity<Void> setupDataFromCricFeed(
+            @RequestParam(name = "usernames") List<String> usernames,
+            @RequestBody CricSheetMatchData matchData
+    ) {
+        cricketFeedService.setupDatabaseFromCrickFeed(matchData);
+        matchService.updatePoints(matchData);
+        List<User> users = userService.saveUsers(usernames);
+        List<UserFantasySquad> squadList = userFantasyService.generateUserFantasyMatches(users, matchData);
+        fantasyService.calculatePoints(matchData, squadList);
+
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/generate-cricsheet-feed")
     public ResponseEntity<Void> generateCricksheetData() {
-        cricketService.generateCricsheetDataFromJson();
+        cricketFeedService.generateCricsheetDataFromJson();
         return ResponseEntity.ok().build();
     }
 
@@ -42,7 +63,7 @@ public class CricketController {
             @RequestParam(name = "event") String event,
             @RequestParam(name = "season") String season
     ) {
-        cricketService.generateRandomTeamsForUser(usernames, event, season);
+        userFantasyService.generateRandomTeamsForUser(usernames, event, season);
         return ResponseEntity.ok().build();
     }
 }

@@ -4,13 +4,8 @@ import com.cricket.fantasy.common.CricksheetHelper;
 import com.cricket.fantasy.entity.cricket.Player;
 import com.cricket.fantasy.entity.cricket.Team;
 import com.cricket.fantasy.entity.cricsheet.CricksheetMatch;
-import com.cricket.fantasy.entity.enums.FantasyPlayerType;
 import com.cricket.fantasy.entity.enums.FantasyWicketKind;
 import com.cricket.fantasy.entity.enums.PlayerType;
-import com.cricket.fantasy.entity.fantasy.Match;
-import com.cricket.fantasy.entity.fantasy.user.UserFantasyMatch;
-import com.cricket.fantasy.entity.fantasy.user.UserFantasyPlayer;
-import com.cricket.fantasy.entity.user.User;
 import com.cricket.fantasy.model.domain.cricsheet.CricSheetMatchData;
 import com.cricket.fantasy.model.domain.cricsheet.Delivery;
 import com.cricket.fantasy.model.domain.cricsheet.Inning;
@@ -39,13 +34,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Random;
-import java.util.stream.Collectors;
 
 @Service
-public class CricketService {
+public class CricketFeedService {
 
-    private static final Logger logger = LoggerFactory.getLogger(CricketService.class);
+    private static final Logger logger = LoggerFactory.getLogger(CricketFeedService.class);
 
     @Autowired
     private MatchService matchService;
@@ -74,6 +67,10 @@ public class CricketService {
     @Autowired
     private UserFantasyMatchRepository userFantasyMatchRepository;
 
+    /**
+     * Generate and persist {@link Team}, {@link Player}
+     * @param matchData Match information data feed
+     */
     public void setupDatabaseFromCrickFeed(CricSheetMatchData matchData) {
         List<String> teamNames = matchData.getInfo().getTeams();
         for (String teamName : teamNames) {
@@ -135,8 +132,6 @@ public class CricketService {
                 }
             }
         }
-
-
     }
 
     public void generateCricsheetDataFromJson() {
@@ -187,75 +182,5 @@ public class CricketService {
         } catch (Exception exception) {
             logger.error("FILE EXCEPTION", exception);
         }
-    }
-
-    public void generateRandomTeamsForUser(List<String> usernames, String eventName, String season) {
-        List<User> users = userService.saveUsers(usernames);
-        List<CricksheetMatch> matches = cricksheetMatchRepository.findByEventNameAndSeasonOrderByDateAsc(
-                eventName,
-                season
-        );
-
-        for (CricksheetMatch match : matches) {
-            try {
-                ObjectMapper objectMapper = new ObjectMapper();
-                CricSheetMatchData matchData = objectMapper.readValue(match.getJson(), CricSheetMatchData.class);
-                setupDatabaseFromCrickFeed(matchData);
-                List<UserFantasyMatch> userFantasyMatches = generateUserFantasyMatches(users, matchData);
-
-            } catch (Exception exception) {
-                logger.error("CONVERSION ERROR", exception);
-            }
-        }
-    }
-
-    private List<UserFantasyMatch> generateUserFantasyMatches(List<User> users, CricSheetMatchData matchData) {
-        Match match = matchService.findMatch(String.join(",", matchData.getInfo().getTeams()));
-        List<Player> players = new ArrayList<>();
-        for (String teamName : matchData.getInfo().getTeams()) {
-            List<Player> typePlayers = playerRepository.findByTeam_Name(teamName);
-            if (typePlayers.size() == 0) {
-                throw new EntityNotFoundException("Players not found");
-            }
-
-            players.addAll(typePlayers);
-        }
-
-        List<UserFantasyMatch> userFantasyMatchList = new ArrayList<>();
-        for (User user : users) {
-            UserFantasyMatch userFantasyMatch = new UserFantasyMatch();
-
-            List<Player> randomPlayerList = pickRandomPlayers(players, 11);
-            List<UserFantasyPlayer> userFantasyPlayers = randomPlayerList.stream().map(randomPlayer -> {
-                UserFantasyPlayer userFantasyPlayer = new UserFantasyPlayer();
-                userFantasyPlayer.setPlayer(randomPlayer);
-                userFantasyPlayer.setMatch(userFantasyMatch);
-                userFantasyPlayer.setType(FantasyPlayerType.REGULAR);
-                return userFantasyPlayer;
-            }).toList();
-
-            userFantasyMatch.setUser(user);
-            userFantasyMatch.setMatch(match);
-            userFantasyMatch.setPlayers(userFantasyPlayers);
-
-            userFantasyMatchList.add(userFantasyMatch);
-        }
-
-        return userFantasyMatchList;
-    }
-
-    private List<Player> pickRandomPlayers(List<Player> players, int limit) {
-        List<Player> randomPlayers = new ArrayList<>();
-        while (randomPlayers.size() < limit) {
-            Random random = new Random();
-            int index = random.nextInt(players.size());
-            Player pickedPlayer = players.get(index);
-
-            if (randomPlayers.stream().noneMatch(randomPlayer -> randomPlayer.getId() == pickedPlayer.getId())) {
-                randomPlayers.add(pickedPlayer);
-            }
-        }
-
-        return randomPlayers;
     }
 }

@@ -24,7 +24,7 @@ public class UserFantasyPlayer extends BaseEntity {
 
     @ManyToOne
     @JoinColumn(name = "match_id")
-    private UserFantasyMatch match;
+    private UserFantasySquad match;
 
     @Enumerated(EnumType.STRING)
     private FantasyPlayerType type;

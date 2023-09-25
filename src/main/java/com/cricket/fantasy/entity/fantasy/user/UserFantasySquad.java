@@ -16,8 +16,8 @@ import java.util.List;
 @Getter
 @Setter
 @Entity
-@Table(name = "user_fantasy_match")
-public class UserFantasyMatch extends BaseEntity {
+@Table(name = "user_fantasy_squad")
+public class UserFantasySquad extends BaseEntity {
 
     @ManyToOne
     @JoinColumn(name = "match_id")
