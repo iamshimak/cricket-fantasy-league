@@ -1,6 +1,7 @@
 package com.cricket.fantasy.repository.cricket;
 
 import com.cricket.fantasy.entity.cricket.Player;
+import com.cricket.fantasy.entity.cricket.Team;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -13,4 +14,5 @@ public interface PlayerRepository extends JpaRepository<Player, Integer> {
     boolean existsByName(String name);
     Optional<Player> findByName(String name);
     List<Player> findByTeam_Name(String name);
+    List<Player> findByTeam(Team team);
 }

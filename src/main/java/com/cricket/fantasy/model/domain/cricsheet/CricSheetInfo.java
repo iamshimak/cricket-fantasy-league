@@ -1,7 +1,8 @@
-package com.cricket.fantasy.model.domain.cricsheet; 
+package com.cricket.fantasy.model.domain.cricsheet;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -9,7 +10,7 @@ import java.util.Map;
 public class CricSheetInfo {
     private int balls_per_over;
     private String city;
-    private ArrayList<String> dates;
+    private List<String> dates;
     private Event event;
     private String gender;
     private String match_type;
@@ -20,7 +21,9 @@ public class CricSheetInfo {
     private Registry registry;
     private String season;
     private String team_type;
-    private ArrayList<String> teams;
+    private List<String> teams;
     private Toss toss;
     private String venue;
+    @JsonProperty("player_of_match")
+    private List<String> playerOfMatch;
 }

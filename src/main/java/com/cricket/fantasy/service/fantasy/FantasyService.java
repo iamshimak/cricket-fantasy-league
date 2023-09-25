@@ -14,10 +14,10 @@ import com.cricket.fantasy.model.domain.cricsheet.Inning;
 import com.cricket.fantasy.model.domain.cricsheet.Over;
 import com.cricket.fantasy.model.domain.cricsheet.Runs;
 import com.cricket.fantasy.model.domain.cricsheet.Wicket;
-import com.cricket.fantasy.repository.fantasy.FantasyPlayerRepository;
-import com.cricket.fantasy.repository.MatchRepository;
 import com.cricket.fantasy.repository.cricket.PlayerRepository;
 import com.cricket.fantasy.repository.cricket.TeamRepository;
+import com.cricket.fantasy.repository.fantasy.FantasyPlayerRepository;
+import com.cricket.fantasy.service.cricket.MatchService;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,7 +36,7 @@ public class FantasyService {
     private static final Logger logger = LoggerFactory.getLogger(FantasyService.class);
 
     @Autowired
-    private MatchRepository matchRepository;
+    private MatchService matchService;
 
     @Autowired
     private TeamRepository teamRepository;
@@ -49,16 +49,7 @@ public class FantasyService {
 
     public void updatePoints(CricSheetMatchData matchData) {
         String teams = String.join(",", matchData.getInfo().getTeams());
-        Optional<Match> optionalMatch = matchRepository.findByTeams(teams);
-
-        if (optionalMatch.isEmpty()) {
-            Match newMatch = new Match();
-            newMatch.setTeams(teams);
-            matchRepository.save(newMatch);
-            matchRepository.flush();
-        }
-
-        Optional<Match> match = matchRepository.findByTeams(teams);
+        Match match = matchService.findMatch(teams);
 
         Map<String, List<String>> playerNames = matchData.getInfo().getPlayers();
         for (Map.Entry<String, List<String>> entry : playerNames.entrySet()) {
@@ -74,8 +65,8 @@ public class FantasyService {
                     throw new EntityNotFoundException(String.format("Player %s not found", playerName));
                 }
 
-                if (fantasyPlayerRepository.findByPlayerAndMatch(player.get(), match.get()).isEmpty()) {
-                    FantasyPlayer fantasyPlayer = new FantasyPlayer(player.get(), match.get(), new FantasyPoints());
+                if (fantasyPlayerRepository.findByPlayerAndMatch(player.get(), match).isEmpty()) {
+                    FantasyPlayer fantasyPlayer = new FantasyPlayer(player.get(), match, new FantasyPoints());
                     fantasyPlayers.add(fantasyPlayer);
                 }
             }
@@ -84,8 +75,8 @@ public class FantasyService {
         }
 
         fantasyPlayerRepository.flush();
-        Optional<Match> updatedMatch = matchRepository.findByTeams(teams);
-        List<FantasyPlayer> players = updatedMatch.get().getPlayers();
+        Match updatedMatch = matchService.findMatch(teams);
+        List<FantasyPlayer> players = updatedMatch.getPlayers();
 
         if (players == null) {
             throw new EntityNotFoundException("Players not found");
@@ -94,9 +85,8 @@ public class FantasyService {
         for (Inning inning : matchData.getInnings()) {
             for (Over over : inning.getOvers()) {
                 updatePoints(players, over);
-                calculatePoints(players);
 
-                logger.info("MATCH {} OVER {}", updatedMatch.get().getTeams(), over.getOver() + 1);
+                logger.info("MATCH {} OVER {}", updatedMatch.getTeams(), over.getOver() + 1);
                 for (FantasyPlayer player : players) {
                     logger.info("{}\t - {}", player.getPoints().getTotalPoints(), player.getPlayer().getName());
                 }
@@ -105,7 +95,7 @@ public class FantasyService {
 
         calculatePoints(players);
 
-        logger.info("MATCH {}", updatedMatch.get().getTeams());
+        logger.info("MATCH {}", updatedMatch.getTeams());
         for (FantasyPlayer player : players) {
             logger.info("{}\t - {}", player.getPoints().getTotalPoints(), player.getPlayer().getName());
         }
