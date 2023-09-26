@@ -1,19 +1,17 @@
 package com.cricket.fantasy.service;
 
 import com.cricket.fantasy.common.CricksheetHelper;
+import com.cricket.fantasy.entity.Match;
 import com.cricket.fantasy.entity.Player;
+import com.cricket.fantasy.entity.User;
+import com.cricket.fantasy.entity.UserFantasyPlayer;
+import com.cricket.fantasy.entity.UserFantasySquad;
 import com.cricket.fantasy.entity.cricsheet.CricksheetMatch;
 import com.cricket.fantasy.entity.enums.FantasyPlayerType;
-import com.cricket.fantasy.entity.Match;
-import com.cricket.fantasy.entity.UserFantasySquad;
-import com.cricket.fantasy.entity.UserFantasyPlayer;
-import com.cricket.fantasy.entity.User;
 import com.cricket.fantasy.model.domain.cricsheet.CricSheetMatchData;
 import com.cricket.fantasy.repository.PlayerRepository;
-import com.cricket.fantasy.repository.CricksheetMatchRepository;
 import com.cricket.fantasy.repository.UserFantasyMatchRepository;
 import com.cricket.fantasy.repository.UserFantasyPlayerRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,21 +23,12 @@ import java.util.List;
 import java.util.Random;
 
 @Service
-public class FantasyFeedService {
+public class UserFantasyFeedService {
 
-    private static final Logger logger = LoggerFactory.getLogger(FantasyFeedService.class);
-
-    @Autowired
-    private UserService userService;
-
-    @Autowired
-    private CricketFeedService cricketFeedService;
+    private static final Logger logger = LoggerFactory.getLogger(UserFantasyFeedService.class);
 
     @Autowired
     private MatchService matchService;
-
-    @Autowired
-    private CricksheetMatchRepository cricksheetMatchRepository;
 
     @Autowired
     private PlayerRepository playerRepository;
@@ -48,26 +37,6 @@ public class FantasyFeedService {
     private UserFantasyMatchRepository userFantasyMatchRepository;
     @Autowired
     private UserFantasyPlayerRepository userFantasyPlayerRepository;
-
-    public void generateRandomTeamsForUser(List<String> usernames, String eventName, String season) {
-        List<User> users = userService.saveUsers(usernames);
-        List<CricksheetMatch> matches = cricksheetMatchRepository.findByEventNameAndSeasonOrderByDateAsc(
-                eventName,
-                season
-        );
-
-        for (CricksheetMatch match : matches) {
-            try {
-                ObjectMapper objectMapper = new ObjectMapper();
-                CricSheetMatchData matchData = objectMapper.readValue(match.getJson(), CricSheetMatchData.class);
-                cricketFeedService.setupDatabaseFromCrickFeed(matchData);
-//                List<UserFantasySquad> userFantasyMatches = generateUserFantasyMatches(users, matchData);
-
-            } catch (Exception exception) {
-                logger.error("CONVERSION ERROR", exception);
-            }
-        }
-    }
 
     /**
      * Generate random {@link UserFantasySquad} for given {@link CricksheetMatch} and users

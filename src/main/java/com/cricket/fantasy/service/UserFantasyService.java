@@ -1,11 +1,10 @@
 package com.cricket.fantasy.service;
 
-import com.cricket.fantasy.entity.cricsheet.CricksheetMatch;
 import com.cricket.fantasy.entity.FantasyPlayer;
 import com.cricket.fantasy.entity.Match;
 import com.cricket.fantasy.entity.UserFantasyPlayer;
 import com.cricket.fantasy.entity.UserFantasySquad;
-import com.cricket.fantasy.repository.PlayerRepository;
+import com.cricket.fantasy.entity.cricsheet.CricksheetMatch;
 import com.cricket.fantasy.repository.FantasyPlayerRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
@@ -16,19 +15,21 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 @Service
-public class FantasyService {
+public class UserFantasyService {
 
-    private static final Logger logger = LoggerFactory.getLogger(FantasyService.class);
+    private static final Logger logger = LoggerFactory.getLogger(UserFantasyService.class);
 
     @Autowired
     private MatchService matchService;
 
     @Autowired
-    private PlayerRepository playerRepository;
-
-    @Autowired
     private FantasyPlayerRepository fantasyPlayerRepository;
 
+    /**
+     * Calculate fantasy points for given user fantasy squad list
+     * @param cricksheetMatch
+     * @param squadList
+     */
     public void calculatePoints(CricksheetMatch cricksheetMatch, List<UserFantasySquad> squadList) {
         Match match = matchService.findMatch(cricksheetMatch.getTeams());
         List<FantasyPlayer> players = fantasyPlayerRepository.findByMatch(match);
