@@ -1,6 +1,6 @@
 package com.cricket.fantasy.repository;
 
-import com.cricket.fantasy.entity.fantasy.Match;
+import com.cricket.fantasy.entity.Match;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

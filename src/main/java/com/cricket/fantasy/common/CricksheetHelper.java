@@ -1,9 +1,8 @@
 package com.cricket.fantasy.common;
 
-import com.cricket.fantasy.entity.cricket.Player;
+import com.cricket.fantasy.entity.Player;
 import com.cricket.fantasy.entity.cricsheet.CricksheetMatch;
 import com.cricket.fantasy.model.domain.cricsheet.CricSheetMatchData;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.SneakyThrows;
