@@ -1,12 +1,12 @@
 package com.cricket.fantasy.service.fantasy;
 
+import com.cricket.fantasy.entity.cricsheet.CricksheetMatch;
 import com.cricket.fantasy.entity.fantasy.FantasyPlayer;
 import com.cricket.fantasy.entity.fantasy.Match;
 import com.cricket.fantasy.entity.fantasy.user.UserFantasyPlayer;
 import com.cricket.fantasy.entity.fantasy.user.UserFantasySquad;
-import com.cricket.fantasy.model.domain.cricsheet.CricSheetMatchData;
 import com.cricket.fantasy.repository.cricket.PlayerRepository;
-import com.cricket.fantasy.service.cricket.MatchCalculationService;
+import com.cricket.fantasy.repository.fantasy.FantasyPlayerRepository;
 import com.cricket.fantasy.service.cricket.MatchService;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
@@ -19,7 +19,7 @@ import java.util.List;
 @Service
 public class FantasyService {
 
-    private static final Logger logger = LoggerFactory.getLogger(MatchCalculationService.class);
+    private static final Logger logger = LoggerFactory.getLogger(FantasyService.class);
 
     @Autowired
     private MatchService matchService;
@@ -27,11 +27,15 @@ public class FantasyService {
     @Autowired
     private PlayerRepository playerRepository;
 
-    public void calculatePoints(CricSheetMatchData matchData, List<UserFantasySquad> squadList) {
-        Match match = matchService.findMatch(String.join(",", matchData.getInfo().getTeams()));
-        List<FantasyPlayer> players = match.getPlayers();
+    @Autowired
+    private FantasyPlayerRepository fantasyPlayerRepository;
+
+    public void calculatePoints(CricksheetMatch cricksheetMatch, List<UserFantasySquad> squadList) {
+        Match match = matchService.findMatch(cricksheetMatch.getTeams());
+        List<FantasyPlayer> players = fantasyPlayerRepository.findByMatch(match);
 
         for (UserFantasySquad fantasySquad : squadList) {
+            logger.info("***********************************************");
             logger.info("USER: {}", fantasySquad.getUser().getUsername());
             double totalPoints = calculatePoints(fantasySquad, players);
             logger.info("POINTS: {}", totalPoints);
@@ -64,7 +68,8 @@ public class FantasyService {
     private FantasyPlayer findPlayer(List<FantasyPlayer> playerList, UserFantasyPlayer userFantasyPlayer) {
         return playerList.stream()
                 .filter(searchPlayer -> searchPlayer.getPlayer().getId() == userFantasyPlayer.getPlayer().getId())
-                .findFirst().orElseThrow(() -> new EntityNotFoundException(
+                .findFirst()
+                .orElseThrow(() -> new EntityNotFoundException(
                         String.format("Player %s not found", userFantasyPlayer.getId()))
                 );
     }

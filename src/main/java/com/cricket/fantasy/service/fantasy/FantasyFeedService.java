@@ -1,5 +1,6 @@
 package com.cricket.fantasy.service.fantasy;
 
+import com.cricket.fantasy.common.CricksheetHelper;
 import com.cricket.fantasy.entity.cricket.Player;
 import com.cricket.fantasy.entity.cricsheet.CricksheetMatch;
 import com.cricket.fantasy.entity.enums.FantasyPlayerType;
@@ -63,7 +64,7 @@ public class FantasyFeedService {
                 ObjectMapper objectMapper = new ObjectMapper();
                 CricSheetMatchData matchData = objectMapper.readValue(match.getJson(), CricSheetMatchData.class);
                 cricketFeedService.setupDatabaseFromCrickFeed(matchData);
-                List<UserFantasySquad> userFantasyMatches = generateUserFantasyMatches(users, matchData);
+//                List<UserFantasySquad> userFantasyMatches = generateUserFantasyMatches(users, matchData);
 
             } catch (Exception exception) {
                 logger.error("CONVERSION ERROR", exception);
@@ -72,21 +73,23 @@ public class FantasyFeedService {
     }
 
     /**
-     * Generate random {@link UserFantasySquad} for given {@link CricSheetMatchData} and users
+     * Generate random {@link UserFantasySquad} for given {@link CricksheetMatch} and users
      * @param users User collection
-     * @param matchData Match information data feed
+     * @param cricksheetMatch Match information data feed
      * @return Random squads
      */
-    public List<UserFantasySquad> generateUserFantasyMatches(List<User> users, CricSheetMatchData matchData) {
-        Match match = matchService.findMatch(String.join(",", matchData.getInfo().getTeams()));
-        List<Player> players = new ArrayList<>();
+    public List<UserFantasySquad> generateUserFantasyMatches(List<User> users, CricksheetMatch cricksheetMatch) {
+        Match match = matchService.findMatch(cricksheetMatch.getTeams());
+        CricSheetMatchData matchData = CricksheetHelper.getMatchData(cricksheetMatch);
+
+        List<Player> playerList = new ArrayList<>();
         for (String teamName : matchData.getInfo().getTeams()) {
             List<Player> typePlayers = playerRepository.findByTeam_Name(teamName);
             if (typePlayers.size() == 0) {
                 throw new EntityNotFoundException("Players not found");
             }
 
-            players.addAll(typePlayers);
+            playerList.addAll(typePlayers);
         }
 
         userFantasyMatchRepository.flush();
@@ -99,7 +102,7 @@ public class FantasyFeedService {
 
             UserFantasySquad updatedUserFantasyMatch = userFantasyMatchRepository.saveAndFlush(userFantasyMatch);
 
-            List<Player> randomPlayerList = pickRandomPlayers(players, 11);
+            List<Player> randomPlayerList = pickRandomPlayers(playerList, 11);
             List<UserFantasyPlayer> userFantasyPlayers = randomPlayerList.stream().map(randomPlayer -> {
                 UserFantasyPlayer userFantasyPlayer = new UserFantasyPlayer();
                 userFantasyPlayer.setPlayer(randomPlayer);

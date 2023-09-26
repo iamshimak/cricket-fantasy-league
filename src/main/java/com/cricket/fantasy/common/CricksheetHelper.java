@@ -1,7 +1,12 @@
 package com.cricket.fantasy.common;
 
 import com.cricket.fantasy.entity.cricket.Player;
+import com.cricket.fantasy.entity.cricsheet.CricksheetMatch;
+import com.cricket.fantasy.model.domain.cricsheet.CricSheetMatchData;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
+import lombok.SneakyThrows;
 
 import java.util.List;
 import java.util.Optional;
@@ -18,5 +23,11 @@ public final class CricksheetHelper {
         }
 
         return fantasyPlayer.get();
+    }
+
+    @SneakyThrows
+    public static CricSheetMatchData getMatchData(CricksheetMatch cricksheetMatch) {
+        ObjectMapper objectMapper = new ObjectMapper();
+        return objectMapper.readValue(cricksheetMatch.getJson(), CricSheetMatchData.class);
     }
 }

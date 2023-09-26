@@ -1,7 +1,9 @@
 package com.cricket.fantasy.service.cricket;
 
+import com.cricket.fantasy.common.CricksheetHelper;
 import com.cricket.fantasy.entity.cricket.Player;
 import com.cricket.fantasy.entity.cricket.Team;
+import com.cricket.fantasy.entity.cricsheet.CricksheetMatch;
 import com.cricket.fantasy.entity.fantasy.FantasyPlayer;
 import com.cricket.fantasy.entity.fantasy.FantasyPoints;
 import com.cricket.fantasy.entity.fantasy.Match;
@@ -12,6 +14,7 @@ import com.cricket.fantasy.repository.MatchRepository;
 import com.cricket.fantasy.repository.cricket.PlayerRepository;
 import com.cricket.fantasy.repository.cricket.TeamRepository;
 import com.cricket.fantasy.repository.fantasy.FantasyPlayerRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,16 +51,20 @@ public class MatchService {
 
     /**
      * Generate and calculate points for {@link FantasyPlayer}
-     * @param matchData matchData Match information data feed
+     * @param cricksheetMatch Match information data feed
      */
-    public void updatePoints(CricSheetMatchData matchData) {
-        Match match = createFantasyPlayersFor(matchData);
+    public void updatePoints(CricksheetMatch cricksheetMatch) {
+        Match match = createFantasyPlayersFor(cricksheetMatch);
         List<FantasyPlayer> players = match.getPlayers();
 
         if (players == null || players.isEmpty()) {
-            throw new EntityNotFoundException("Players not found");
+            players = fantasyPlayerRepository.findByMatch(match);
+            if (players == null || players.isEmpty()) {
+                throw new EntityNotFoundException("Players not found");
+            }
         }
 
+        CricSheetMatchData matchData = CricksheetHelper.getMatchData(cricksheetMatch);
         for (Inning inning : matchData.getInnings()) {
             for (Over over : inning.getOvers()) {
                 matchFeedService.updatePoints(players, over);
@@ -88,15 +95,15 @@ public class MatchService {
         return match.get();
     }
 
-    Match createFantasyPlayersFor(CricSheetMatchData matchData) {
-        String teams = String.join(",", matchData.getInfo().getTeams());
-        Match match = findMatch(teams);
+    private Match createFantasyPlayersFor(CricksheetMatch cricksheetMatch) {
+        Match match = findMatch(cricksheetMatch.getTeams());
+        CricSheetMatchData matchData = CricksheetHelper.getMatchData(cricksheetMatch);
 
         Map<String, List<String>> playerNames = matchData.getInfo().getPlayers();
         for (Map.Entry<String, List<String>> entry : playerNames.entrySet()) {
             Optional<Team> team = teamRepository.findByName(entry.getKey());
             if (team.isEmpty()) {
-                continue;
+                throw new EntityNotFoundException(String.format("Team %s not found", entry.getKey()));
             }
 
             List<FantasyPlayer> fantasyPlayers = new ArrayList<>();
@@ -106,9 +113,17 @@ public class MatchService {
                     throw new EntityNotFoundException(String.format("Player %s not found", playerName));
                 }
 
-                if (fantasyPlayerRepository.findByPlayerAndMatch(player.get(), match).isEmpty()) {
+                Optional<FantasyPlayer> optionalFantasyPlayer = fantasyPlayerRepository.findByPlayerAndMatch(
+                        player.get(),
+                        match
+                );
+
+                if (optionalFantasyPlayer.isEmpty()) {
                     FantasyPlayer fantasyPlayer = new FantasyPlayer(player.get(), match, new FantasyPoints());
                     fantasyPlayers.add(fantasyPlayer);
+                } else {
+                    optionalFantasyPlayer.get().setPoints(new FantasyPoints());
+                    fantasyPlayers.add(optionalFantasyPlayer.get());
                 }
             }
 
@@ -116,6 +131,8 @@ public class MatchService {
         }
 
         fantasyPlayerRepository.flush();
-        return findMatch(teams);
+        matchRepository.flush();
+
+        return findMatch(match.getTeams());
     }
 }

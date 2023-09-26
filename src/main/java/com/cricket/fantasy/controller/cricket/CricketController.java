@@ -1,13 +1,16 @@
 package com.cricket.fantasy.controller.cricket;
 
+import com.cricket.fantasy.entity.cricsheet.CricksheetMatch;
 import com.cricket.fantasy.entity.fantasy.user.UserFantasySquad;
 import com.cricket.fantasy.entity.user.User;
 import com.cricket.fantasy.model.domain.cricsheet.CricSheetMatchData;
+import com.cricket.fantasy.model.domain.cricsheet.Match;
 import com.cricket.fantasy.service.cricket.CricketFeedService;
 import com.cricket.fantasy.service.cricket.MatchService;
 import com.cricket.fantasy.service.fantasy.FantasyFeedService;
 import com.cricket.fantasy.service.fantasy.FantasyService;
 import com.cricket.fantasy.service.user.UserService;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -42,11 +45,11 @@ public class CricketController {
             @RequestParam(name = "usernames") List<String> usernames,
             @RequestBody CricSheetMatchData matchData
     ) {
-        cricketFeedService.setupDatabaseFromCrickFeed(matchData);
-        matchService.updatePoints(matchData);
+        CricksheetMatch cricksheetMatch = cricketFeedService.setupDatabaseFromCrickFeed(matchData);
+        matchService.updatePoints(cricksheetMatch);
         List<User> users = userService.saveUsers(usernames);
-        List<UserFantasySquad> squadList = userFantasyService.generateUserFantasyMatches(users, matchData);
-        fantasyService.calculatePoints(matchData, squadList);
+        List<UserFantasySquad> squadList = userFantasyService.generateUserFantasyMatches(users, cricksheetMatch);
+        fantasyService.calculatePoints(cricksheetMatch, squadList);
 
         return ResponseEntity.ok().build();
     }

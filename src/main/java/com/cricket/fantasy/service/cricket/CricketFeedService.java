@@ -19,6 +19,8 @@ import com.cricket.fantasy.repository.fantasy.UserFantasyMatchRepository;
 import com.cricket.fantasy.repository.user.UserRepository;
 import com.cricket.fantasy.service.fantasy.FantasyService;
 import com.cricket.fantasy.service.user.UserService;
+import com.cricket.fantasy.transformer.FantasyTransformer;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
@@ -71,7 +73,7 @@ public class CricketFeedService {
      * Generate and persist {@link Team}, {@link Player}
      * @param matchData Match information data feed
      */
-    public void setupDatabaseFromCrickFeed(CricSheetMatchData matchData) {
+    public CricksheetMatch setupDatabaseFromCrickFeed(CricSheetMatchData matchData) {
         List<String> teamNames = matchData.getInfo().getTeams();
         for (String teamName : teamNames) {
             if (!teamRepository.existsByName(teamName)) {
@@ -132,6 +134,15 @@ public class CricketFeedService {
                 }
             }
         }
+
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            String json = objectMapper.writeValueAsString(matchData);
+            return FantasyTransformer.toCricksheetMatch(matchData, json);
+        } catch (JsonProcessingException exception) {
+            logger.error("JSON PROCESSING ERROR", exception);
+            throw new InternalError(exception.getMessage());
+        }
     }
 
     public void generateCricsheetDataFromJson() {
@@ -158,22 +169,9 @@ public class CricketFeedService {
 
                 //convert json string to object
                 CricSheetMatchData matchData = objectMapper.readValue(jsonData, CricSheetMatchData.class);
-
-                CricksheetMatch match = new CricksheetMatch();
-                match.setBallPerOver(matchData.getInfo().getBalls_per_over());
-                match.setDate(String.join(",", matchData.getInfo().getDates()));
-                match.setEventName(matchData.getInfo().getEvent().getName());
-                match.setEventMatchNumber(matchData.getInfo().getEvent().getMatchNumber());
-                match.setGender(matchData.getInfo().getGender());
-                match.setMatchType(matchData.getInfo().getMatch_type());
-                match.setOvers(matchData.getInfo().getOvers());
-                match.setSeason(matchData.getInfo().getSeason());
-                match.setTeamType(matchData.getInfo().getTeam_type());
-                match.setTeams(String.join(",",matchData.getInfo().getTeams()));
-
                 String json = objectMapper.writeValueAsString(matchData);
-                match.setJson(json);
 
+                CricksheetMatch match = FantasyTransformer.toCricksheetMatch(matchData, json);
                 matches.add(match);
             }
 
